@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mypod
+  name: mypod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mypod
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: mypod
+    spec:
+      containers:
+      - image: rohitrawat891997/nginx:23745981348
+        name: web
