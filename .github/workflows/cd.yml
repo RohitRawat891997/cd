@@ -1,0 +1,65 @@
+# CI for Web Service
+
+name: advancer-awar-ci
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: demo-path/
+          file: demo-path/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/nginx:${{ github.run_id }}
+
+  updatek8s:
+    runs-on: ubuntu-latest
+    needs: docker
+
+    steps:
+      - name: Checkout repository (with branch)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.MY_TOKEN }}
+
+      - name: Commit and push changes safely
+        run: |
+          git config --global user.email "rohitrawat891997@gmail.com"
+          git config --global user.name "Rohit Rawat"
+
+          # STEP 1: Sync with latest remote FIRST
+          git fetch origin main
+          git checkout main
+          git pull --rebase origin main
+
+          # STEP 2: Update Kubernetes manifest AFTER sync
+          sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/nginx:${{ github.run_id }}|" demo-path/web-deployment.yaml
+
+          # STEP 3: Commit only if there are changes
+          git add demo-path/web-deployment.yaml
+          git diff --cached --quiet || git commit -m "[CI]: Update nginx image tag"
+
+          # STEP 4: Push changes
+          git push origin main
