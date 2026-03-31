@@ -5,7 +5,7 @@ metadata:
     app: mypod
   name: mypod
 spec:
-  replicas: 5
+  replicas: 1
   selector:
     matchLabels:
       app: mypod
